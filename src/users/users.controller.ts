@@ -1,4 +1,14 @@
-import { Body, Controller, Get, OnModuleInit, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  OnModuleInit,
+  Param,
+  Patch,
+  Post,
+  Put,
+} from '@nestjs/common';
 import { Client, ClientKafka, Transport } from '@nestjs/microservices';
 import { ApiBody } from '@nestjs/swagger';
 import { Observable } from 'rxjs';
@@ -23,7 +33,7 @@ export class UsersController implements OnModuleInit {
   private client: ClientKafka;
 
   async onModuleInit() {
-    const requestPatterns = ['find-all-user'];
+    const requestPatterns = ['find-all-user', 'find-user', 'create-user'];
 
     requestPatterns.forEach(async (pattern) => {
       this.client.subscribeToResponseOf(pattern);
@@ -36,9 +46,46 @@ export class UsersController implements OnModuleInit {
     return this.client.send('find-all-user', {});
   }
 
+  @Get(':id')
+  find(@Param('id') id: number): Observable<User> {
+    return this.client.send('find-user', { id });
+  }
+
   @Post()
   @ApiBody({ type: UserDto })
-  create(@Body() user: UserDto) {
-    return this.client.emit('create-user', user);
+  create(@Body() user: UserDto): Observable<User> {
+    return this.client.send('create-user', user);
+  }
+
+  @Put(':id')
+  @ApiBody({ type: UserDto })
+  update(
+    @Param('id') id: number,
+    @Body() { name, email, phone, password }: UserDto,
+  ) {
+    const payload = {
+      id,
+      name,
+      email,
+      phone,
+      password,
+    };
+
+    return this.client.emit('update-user', payload);
+  }
+
+  @Delete(':id')
+  remove(@Param('id') id: number) {
+    return this.client.emit('delete-user', { id });
+  }
+
+  @Patch(':id/activate')
+  activate(@Param('id') id: number) {
+    return this.client.emit('activate-user', { id });
+  }
+
+  @Patch(':id/inactivate')
+  inactivate(@Param('id') id: number) {
+    return this.client.emit('inactivate-user', { id });
   }
 }
